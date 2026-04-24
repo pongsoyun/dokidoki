@@ -495,108 +495,111 @@
   <div id="modal-root"></div>
   <div id="toast" class="toast"></div>
 
-  <script>
-    // ─── STORAGE (IndexedDB) ───────────────────────────────────────────────────
-    const DB = (() => {
-      let _db = null;
+  <script type="module">
+    // ─── FIREBASE ──────────────────────────────────────────────────────────────
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
-      function open() {
-        if (_db) return Promise.resolve(_db);
-        return new Promise((res, rej) => {
-          const req = indexedDB.open('dokidoki', 1);
-          req.onupgradeneeded = e => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('folders'))
-              db.createObjectStore('folders', { keyPath: 'id' });
-            if (!db.objectStoreNames.contains('files'))
-              db.createObjectStore('files', { keyPath: 'id' });
-          };
-          req.onsuccess = e => { _db = e.target.result; res(_db); };
-          req.onerror = e => rej(e.target.error);
-        });
-      }
+    const firebaseConfig = {
+      apiKey: "AIzaSyCDtu-I65fGds2hcN-ze9YAmtLHhN4HQnk",
+      authDomain: "dokidoki-b03c6.firebaseapp.com",
+      projectId: "dokidoki-b03c6",
+      storageBucket: "dokidoki-b03c6.firebasestorage.app",
+      messagingSenderId: "635773673933",
+      appId: "1:635773673933:web:79021a01e3d1c41fd66484",
+    };
 
-      async function tx(store, mode, fn) {
-        const db = await open();
-        return new Promise((res, rej) => {
-          const t = db.transaction(store, mode);
-          const s = t.objectStore(store);
-          const req = fn(s);
-          req.onsuccess = () => res(req.result);
-          req.onerror = () => rej(req.error);
-        });
-      }
+    const firebaseApp = initializeApp(firebaseConfig);
+    const firedb = getFirestore(firebaseApp);
+    const storage = getStorage(firebaseApp);
 
-      async function getAll(store) {
-        const db = await open();
-        return new Promise((res, rej) => {
-          const req = db.transaction(store, 'readonly').objectStore(store).getAll();
-          req.onsuccess = () => res(req.result);
-          req.onerror = () => rej(req.error);
-        });
-      }
+    // ─── STORAGE (Firestore + Firebase Storage) ────────────────────────────────
+    const DB = {
+      getNickname: () => localStorage.getItem('doki_nickname') || '익명',
+      setNickname: n => localStorage.setItem('doki_nickname', n),
 
-      return {
-        init: open,
+      // Folders
+      getFolders: async () => {
+        const snap = await getDocs(collection(firedb, 'folders'));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      },
+      getFolder: async id => {
+        const snap = await getDoc(doc(firedb, 'folders', id));
+        return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+      },
+      createFolder: async (name, unit) => {
+        const folders = await DB.getFolders();
+        if (folders.length >= 5) return null;
+        if (folders.find(f => trimName(f.name) === trimName(name))) return 'dup';
+        const data = { name: trimName(name), unit, order: folders.length, createdAt: today() };
+        const ref = await addDoc(collection(firedb, 'folders'), data);
+        return { id: ref.id, ...data };
+      },
+      updateFolder: async (id, data) => {
+        if (data.name) {
+          const folders = await DB.getFolders();
+          if (folders.find(f => f.id !== id && trimName(f.name) === trimName(data.name))) return 'dup';
+          data.name = trimName(data.name);
+        }
+        await updateDoc(doc(firedb, 'folders', id), data);
+        return { id, ...data };
+      },
+      deleteFolder: async id => {
+        const files = await DB.getFolderFiles(id);
+        await Promise.all(files.map(f => DB.deleteFile(f.id)));
+        await deleteDoc(doc(firedb, 'folders', id));
+      },
 
-        // Nickname: tiny string → localStorage OK
-        getNickname: () => localStorage.getItem('doki_nickname') || '익명',
-        setNickname: n => { localStorage.setItem('doki_nickname', n); },
-
-        // Folders
-        getFolders: () => getAll('folders').then(r => r.sort((a, b) => a.order - b.order)),
-        getFolder: id => tx('folders', 'readonly', s => s.get(id)),
-        async createFolder(name, unit) {
-          const folders = await this.getFolders();
-          if (folders.length >= 5) return null;
-          if (folders.find(f => trimName(f.name) === trimName(name))) return 'dup';
-          const f = { id: uid(), name: trimName(name), unit, order: folders.length, createdAt: today() };
-          await tx('folders', 'readwrite', s => s.put(f));
-          return f;
-        },
-        async updateFolder(id, data) {
-          const folder = await this.getFolder(id);
-          if (!folder) return;
-          if (data.name) {
-            const folders = await this.getFolders();
-            if (folders.find(f => f.id !== id && trimName(f.name) === trimName(data.name))) return 'dup';
-            data.name = trimName(data.name);
+      // Files
+      getFiles: async () => {
+        const snap = await getDocs(collection(firedb, 'files'));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      },
+      getFolderFiles: async folderId => {
+        const q = query(collection(firedb, 'files'), where('folderId', '==', folderId));
+        const snap = await getDocs(q);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      },
+      getFile: async id => {
+        const snap = await getDoc(doc(firedb, 'files', id));
+        return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+      },
+      createFile: async (data, imageBlob) => {
+        let imageUrl = null, imagePath = null;
+        if (imageBlob) {
+          imagePath = `images/${uid()}.jpg`;
+          await uploadBytes(sRef(storage, imagePath), imageBlob);
+          imageUrl = await getDownloadURL(sRef(storage, imagePath));
+        }
+        const fileData = { ...data, imageUrl, imagePath, createdAt: today() };
+        const ref = await addDoc(collection(firedb, 'files'), fileData);
+        return { id: ref.id, ...fileData };
+      },
+      updateFile: async (id, data, imageBlob) => {
+        const existing = await DB.getFile(id);
+        let imageUrl = existing?.imageUrl ?? null;
+        let imagePath = existing?.imagePath ?? null;
+        if (imageBlob) {
+          if (existing?.imagePath) {
+            try { await deleteObject(sRef(storage, existing.imagePath)); } catch (e) {}
           }
-          const updated = { ...folder, ...data };
-          await tx('folders', 'readwrite', s => s.put(updated));
-          return updated;
-        },
-        async deleteFolder(id) {
-          await tx('folders', 'readwrite', s => s.delete(id));
-          const files = await this.getFolderFiles(id);
-          const db = await open();
-          await new Promise((res, rej) => {
-            const t = db.transaction('files', 'readwrite');
-            const s = t.objectStore('files');
-            files.forEach(f => s.delete(f.id));
-            t.oncomplete = res; t.onerror = rej;
-          });
-        },
-
-        // Files
-        getFiles: () => getAll('files'),
-        getFolderFiles: id => getAll('files').then(r => r.filter(f => f.folderId === id)),
-        getFile: id => tx('files', 'readonly', s => s.get(id)),
-        async createFile(data) {
-          const f = { id: uid(), ...data, createdAt: today() };
-          await tx('files', 'readwrite', s => s.put(f));
-          return f;
-        },
-        async updateFile(id, data) {
-          const file = await this.getFile(id);
-          if (!file) return;
-          const updated = { ...file, ...data };
-          await tx('files', 'readwrite', s => s.put(updated));
-          return updated;
-        },
-        deleteFile: id => tx('files', 'readwrite', s => s.delete(id)),
-      };
-    })();
+          imagePath = `images/${uid()}.jpg`;
+          await uploadBytes(sRef(storage, imagePath), imageBlob);
+          imageUrl = await getDownloadURL(sRef(storage, imagePath));
+        }
+        const updateData = { ...data, imageUrl, imagePath };
+        await updateDoc(doc(firedb, 'files', id), updateData);
+        return { id, ...existing, ...updateData };
+      },
+      deleteFile: async id => {
+        const file = await DB.getFile(id);
+        if (file?.imagePath) {
+          try { await deleteObject(sRef(storage, file.imagePath)); } catch (e) {}
+        }
+        await deleteDoc(doc(firedb, 'files', id));
+      },
+    };
 
     // ─── UTILS ─────────────────────────────────────────────────────────────────
     function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -627,9 +630,9 @@
     }
 
     async function getLatestFileImage(folderId) {
-      const files = (await DB.getFolderFiles(folderId)).filter(f => f.imageData);
+      const files = (await DB.getFolderFiles(folderId)).filter(f => f.imageUrl);
       if (!files.length) return null;
-      return files.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0].imageData;
+      return files.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0].imageUrl;
     }
 
     async function getLongestDday() {
@@ -654,7 +657,7 @@
       });
     }
 
-    function toBase64(file) {
+    function compressToBlob(file) {
       return new Promise((res, rej) => {
         const r = new FileReader();
         r.onload = e => {
@@ -669,11 +672,20 @@
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            res(canvas.toDataURL('image/jpeg', 0.75));
+            canvas.toBlob(blob => res(blob), 'image/jpeg', 0.75);
           };
           img.onerror = rej;
           img.src = e.target.result;
         };
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+    }
+
+    function fileToPreview(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
         r.onerror = rej;
         r.readAsDataURL(file);
       });
@@ -827,7 +839,7 @@
 
     function renderFileListCard(file) {
       const ddayNum = dday(file.date);
-      const thumbHtml = file.imageData ? `<img src="${file.imageData}" alt="">` : `🐾`;
+      const thumbHtml = file.imageUrl ? `<img src="${file.imageUrl}" alt="">` : `🐾`;
       return `
         <div class="file-card" data-file-id="${file.id}">
           <div class="file-thumb">${thumbHtml}</div>
@@ -842,10 +854,10 @@
 
     function renderFileGridCard(file) {
       const ddayNum = dday(file.date);
-      if (file.imageData) {
+      if (file.imageUrl) {
         return `
           <div class="file-grid-card" data-file-id="${file.id}">
-            <img src="${file.imageData}" alt="">
+            <img src="${file.imageUrl}" alt="">
             <div class="file-grid-overlay">
               <span class="file-grid-name">${escHtml(file.name)}</span>
               ${ddayNum ? `<span class="file-grid-since">+${ddayNum}일째</span>` : ''}
@@ -900,8 +912,8 @@
             <button class="nav-btn" id="nextFileBtn" ${!nextFile ? 'disabled' : ''} data-file-id="${nextFile?.id || ''}">›</button>
           </div>
 
-          ${file.imageData
-            ? `<div class="file-image-wrap"><img src="${file.imageData}" alt=""></div>`
+          ${file.imageUrl
+            ? `<div class="file-image-wrap"><img src="${file.imageUrl}" alt=""></div>`
             : `<div class="file-image-wrap file-image-placeholder">📷</div>`
           }
 
@@ -1170,7 +1182,11 @@
     async function showCreateFileModal(folderId, editFileId = null) {
       const existing = editFileId ? await DB.getFile(editFileId) : null;
       const isEdit = !!existing;
-      let imageData = existing?.imageData || null;
+      let imageFile = null;        // 새로 선택한 File 객체
+      let imagePreview = null;     // 미리보기용 data URL
+      let existingImageUrl = existing?.imageUrl || null; // 기존 URL
+
+      const hasImage = () => imageFile || existingImageUrl;
 
       showModal(`
         <div class="modal-overlay" id="modalOverlay">
@@ -1181,8 +1197,8 @@
             <div class="form-group">
               <label class="form-label">사진 <span class="req">*</span></label>
               <div class="img-upload-area" id="imgUploadArea">
-                ${imageData
-                  ? `<img id="imgPreview" src="${imageData}" alt=""><button class="img-remove-btn" id="imgRemoveBtn">✕</button>`
+                ${existingImageUrl
+                  ? `<img id="imgPreview" src="${existingImageUrl}" alt=""><button class="img-remove-btn" id="imgRemoveBtn">✕</button>`
                   : `<span class="img-upload-icon">📷</span><span class="img-upload-text">사진을 추가해주세요</span>`
                 }
               </div>
@@ -1222,7 +1238,7 @@
                 maxlength="600" placeholder="자유롭게 기록해보세요 (특수문자, 이모지 가능)">${existing ? escHtml(existing.description || '') : ''}</textarea>
             </div>
 
-            <button class="btn-primary" id="saveFileBtn" ${(!isEdit && !imageData) ? 'disabled' : ''}>${isEdit ? '수정 완료' : '저장하기'}</button>
+            <button class="btn-primary" id="saveFileBtn" ${(!isEdit && !existingImageUrl) ? 'disabled' : ''}>${isEdit ? '수정 완료' : '저장하기'}</button>
           </div>
         </div>
       `);
@@ -1231,31 +1247,28 @@
 
       const checkSaveBtn = () => {
         const name = el('fileNameInput')?.value.trim();
-        el('saveFileBtn').disabled = !imageData || !name;
+        el('saveFileBtn').disabled = !hasImage() || !name;
+      };
+
+      const resetImgArea = () => {
+        imageFile = null; imagePreview = null; existingImageUrl = null;
+        el('imgUploadArea').innerHTML = `<span class="img-upload-icon">📷</span><span class="img-upload-text">사진을 추가해주세요</span>`;
+        checkSaveBtn();
       };
 
       el('imgUploadArea').addEventListener('click', e => {
-        if (e.target.id === 'imgRemoveBtn') {
-          imageData = null;
-          el('imgUploadArea').innerHTML = `<span class="img-upload-icon">📷</span><span class="img-upload-text">사진을 추가해주세요</span>`;
-          checkSaveBtn();
-          return;
-        }
+        if (e.target.id === 'imgRemoveBtn') { resetImgArea(); return; }
         el('imgFileInput').click();
       });
 
       el('imgFileInput').addEventListener('change', async e => {
         const file = e.target.files[0];
         if (!file) return;
-        if (file.size > 10 * 1024 * 1024) { showToast('10MB 이하의 이미지만 가능해요'); return; }
-        imageData = await toBase64(file);
-        el('imgUploadArea').innerHTML = `<img id="imgPreview" src="${imageData}" alt=""><button class="img-remove-btn" id="imgRemoveBtn">✕</button>`;
-        el('imgRemoveBtn').addEventListener('click', e => {
-          e.stopPropagation();
-          imageData = null;
-          el('imgUploadArea').innerHTML = `<span class="img-upload-icon">📷</span><span class="img-upload-text">사진을 추가해주세요</span>`;
-          checkSaveBtn();
-        });
+        if (file.size > 20 * 1024 * 1024) { showToast('20MB 이하의 이미지만 가능해요'); return; }
+        imageFile = file;
+        imagePreview = await fileToPreview(file);
+        el('imgUploadArea').innerHTML = `<img id="imgPreview" src="${imagePreview}" alt=""><button class="img-remove-btn" id="imgRemoveBtn">✕</button>`;
+        el('imgRemoveBtn').addEventListener('click', e => { e.stopPropagation(); resetImgArea(); });
         checkSaveBtn();
       });
 
@@ -1270,15 +1283,15 @@
 
       el('saveFileBtn').addEventListener('click', async () => {
         const name = el('fileNameInput').value.trim();
-        if (!imageData) { showToast('사진을 추가해주세요'); return; }
+        if (!hasImage()) { showToast('사진을 추가해주세요'); return; }
         if (!name) { showToast('이름을 입력해주세요'); return; }
 
         el('saveFileBtn').disabled = true;
-        el('saveFileBtn').textContent = '저장 중...';
+        el('saveFileBtn').textContent = '업로드 중...';
 
+        const imageBlob = imageFile ? await compressToBlob(imageFile) : null;
         const data = {
           folderId,
-          imageData,
           name,
           date: el('fileDateInput').value || null,
           location: el('fileLocationInput').value.trim() || null,
@@ -1287,12 +1300,12 @@
         };
 
         if (isEdit) {
-          await DB.updateFile(editFileId, data);
+          await DB.updateFile(editFileId, data, imageBlob);
           closeModal();
           await render();
           showToast('수정되었어요 ✨');
         } else {
-          await DB.createFile(data);
+          await DB.createFile(data, imageBlob);
           closeModal();
           await render();
           showToast('저장되었어요 🎉');
@@ -1360,10 +1373,7 @@
     }
 
     // ─── INIT ──────────────────────────────────────────────────────────────────
-    (async () => {
-      await DB.init();
-      await render();
-    })();
+    render();
   </script>
 </body>
 </html>
