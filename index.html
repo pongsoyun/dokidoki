@@ -1373,7 +1373,13 @@
     }
 
     // ─── INIT ──────────────────────────────────────────────────────────────────
-    render();
+    render().catch(err => {
+      console.error('render error:', err);
+      document.getElementById('app').innerHTML =
+        `<div style="padding:24px;color:#e53935;font-family:monospace;font-size:13px;white-space:pre-wrap">
+          오류가 발생했어요:\n${err.message}\n\n개발자 도구 콘솔(F12)에서 자세한 내용을 확인하세요.
+        </div>`;
+    });
   </script>
 </body>
 </html>
