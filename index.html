@@ -504,7 +504,7 @@
   <script type="module">
     // ─── FIREBASE ──────────────────────────────────────────────────────────────
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-    import { initializeFirestore, persistentLocalCache, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
     import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
 
     const firebaseConfig = {
@@ -517,9 +517,7 @@
     };
 
     const firebaseApp = initializeApp(firebaseConfig);
-    const firedb = initializeFirestore(firebaseApp, {
-      localCache: persistentLocalCache()
-    });
+    const firedb = getFirestore(firebaseApp);
     const storage = getStorage(firebaseApp);
 
     // ─── STORAGE (Firestore + Firebase Storage) ────────────────────────────────
@@ -716,20 +714,34 @@
     // ─── RENDER ────────────────────────────────────────────────────────────────
     async function render() {
       const app = document.getElementById('app');
-      if (state.view === 'folders') app.innerHTML = await renderFoldersPage();
-      else if (state.view === 'folderDetail') app.innerHTML = await renderFolderDetailPage();
-      else if (state.view === 'fileDetail') app.innerHTML = await renderFileDetailPage();
-      bindEvents();
+      if (state.view === 'folders') {
+        // 1단계: 껍데기 즉시 표시
+        app.innerHTML = renderFoldersShell();
+        bindEvents();
+        // 2단계: 데이터 로드 후 업데이트
+        const [folders, longestDday] = await Promise.all([DB.getFolders(), getLongestDday()]);
+        const cards = await Promise.all(folders.map(f => renderFolderCard(f)));
+        document.getElementById('statFolderCount').textContent = folders.length;
+        document.getElementById('statLongestDday').textContent = longestDday ? `+${longestDday}일` : '-';
+        const listEl = document.getElementById('folderListArea');
+        listEl.innerHTML = cards.join('') +
+          (folders.length < 5 ? `<button class="add-btn" id="addFolderBtn">＋ 폴더 추가하기</button>` : '');
+        if (folders.length === 0) {
+          listEl.innerHTML += `<div class="empty-state"><div class="empty-icon">🐾</div><div class="empty-text">아직 폴더가 없어요.<br>아래 버튼으로 첫 폴더를 만들어보세요!</div></div>`;
+        }
+        bindEvents();
+      } else if (state.view === 'folderDetail') {
+        app.innerHTML = await renderFolderDetailPage();
+        bindEvents();
+      } else if (state.view === 'fileDetail') {
+        app.innerHTML = await renderFileDetailPage();
+        bindEvents();
+      }
     }
 
     // ─── FOLDERS PAGE ──────────────────────────────────────────────────────────
-    async function renderFoldersPage() {
+    function renderFoldersShell() {
       const nickname = DB.getNickname();
-      const folders = await DB.getFolders();
-      const longestDday = await getLongestDday();
-      const folderCount = folders.length;
-      const cards = await Promise.all(folders.map(f => renderFolderCard(f)));
-
       return `
         <div class="page">
           <div class="header">
@@ -745,25 +757,18 @@
             </div>
             <div class="profile-stats">
               <div class="stat-chip">
-                <div class="stat-value">${folderCount}</div>
+                <div class="stat-value" id="statFolderCount">-</div>
                 <div class="stat-label">입주한 최애 수</div>
               </div>
               <div class="stat-chip">
-                <div class="stat-value">${longestDday ? '+' + longestDday + '일' : '-'}</div>
+                <div class="stat-value" id="statLongestDday">-</div>
                 <div class="stat-label">가장 오래된 최애의 입주일</div>
               </div>
             </div>
           </div>
-          <div class="folder-list">
-            ${cards.join('')}
-            ${folders.length < 5 ? `<button class="add-btn" id="addFolderBtn">＋ 폴더 추가하기</button>` : ''}
+          <div class="folder-list" id="folderListArea">
+            <div style="text-align:center;padding:40px 0;color:var(--gray-400);font-size:0.875rem">불러오는 중...</div>
           </div>
-          ${folders.length === 0 ? `
-            <div class="empty-state">
-              <div class="empty-icon">🐾</div>
-              <div class="empty-text">아직 폴더가 없어요.<br>아래 버튼으로 첫 폴더를 만들어보세요!</div>
-            </div>
-          ` : ''}
         </div>
       `;
     }
