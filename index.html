@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ドキドキ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --pink: #ff6b9d;
+      --pink-hover: #e8567f;
+      --pink-light: #ffb6d9;
+      --pink-bg: #fff0f6;
+      --pink-border: #ffd6e8;
+      --white: #ffffff;
+      --gray-100: #f8f8f8;
+      --gray-200: #eeeeee;
+      --gray-400: #aaaaaa;
+      --gray-600: #666666;
+      --gray-800: #2d2d2d;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 2px 12px rgba(255,107,157,0.10);
+      --shadow-md: 0 4px 24px rgba(255,107,157,0.18);
+    }
+    html { font-size: 16px; }
+    body {
+      font-family: 'Noto Sans KR', -apple-system, sans-serif;
+      background: #fdf5f8;
+      color: var(--gray-800);
+      min-height: 100vh;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+    input, textarea, select { font-family: inherit; }
+    a { text-decoration: none; color: inherit; }
+
+    /* HEADER */
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--white);
+      border-bottom: 1px solid var(--pink-border);
+      padding: 0 16px;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .back-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-600); font-size: 1.25rem;
+      transition: background 0.15s;
+    }
+    .back-btn:hover { background: var(--pink-bg); color: var(--pink); }
+    .header-title { font-size: 1rem; font-weight: 700; color: var(--gray-800); }
+    .header-logo { font-size: 1rem; font-weight: 700; color: var(--pink); letter-spacing: -0.5px; }
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-600); font-size: 1.125rem;
+      transition: background 0.15s;
+    }
+    .icon-btn:hover { background: var(--pink-bg); color: var(--pink); }
+
+    /* PROFILE */
+    .profile-section {
+      background: var(--white);
+      border-bottom: 1px solid var(--pink-border);
+      padding: 20px 20px 16px;
+    }
+    .profile-greeting {
+      font-size: 1.0625rem; font-weight: 700; color: var(--gray-800);
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .profile-greeting .nickname {
+      color: var(--pink);
+      max-width: 140px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      display: inline-block; vertical-align: bottom;
+    }
+    .profile-stats { display: flex; gap: 10px; }
+    .stat-chip {
+      flex: 1; background: var(--pink-bg);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      text-align: center;
+    }
+    .stat-value { font-size: 1.125rem; font-weight: 700; color: var(--pink); }
+    .stat-label { font-size: 0.6875rem; color: var(--gray-600); margin-top: 2px; }
+
+    /* FOLDER LIST */
+    .folder-list { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .folder-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .folder-card:active { transform: scale(0.98); box-shadow: none; }
+    .folder-thumbnail {
+      width: 68px; height: 68px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: var(--pink-bg);
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; overflow: hidden;
+    }
+    .folder-thumbnail img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+    .folder-info { flex: 1; min-width: 0; }
+    .folder-name {
+      font-size: 0.9375rem; font-weight: 700; color: var(--gray-800);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      margin-bottom: 4px;
+    }
+    .folder-since { font-size: 0.75rem; font-weight: 600; color: var(--pink); margin-bottom: 2px; }
+    .folder-count { font-size: 0.75rem; color: var(--gray-600); }
+    .folder-arrow { color: var(--gray-400); font-size: 1rem; flex-shrink: 0; }
+
+    /* ADD BUTTON */
+    .add-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 16px;
+      border: 2px dashed var(--pink-border);
+      border-radius: var(--radius);
+      background: none;
+      color: var(--pink);
+      font-size: 0.9375rem; font-weight: 600;
+      width: 100%;
+      transition: background 0.15s;
+    }
+    .add-btn:hover { background: var(--pink-bg); }
+    .add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* FOLDER DETAIL */
+    .folder-info-block {
+      background: var(--white);
+      border-bottom: 1px solid var(--pink-border);
+      padding: 16px 20px;
+    }
+    .folder-info-title {
+      font-size: 0.875rem; color: var(--gray-600);
+      font-family: 'Courier New', monospace;
+      line-height: 1.8;
+    }
+    .folder-info-title .highlight { color: var(--pink); font-weight: 700; }
+
+    /* FILTER BAR */
+    .filter-bar {
+      background: var(--white);
+      border-bottom: 1px solid var(--pink-border);
+      padding: 10px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .filter-left { display: flex; gap: 8px; }
+    .filter-right { display: flex; gap: 6px; }
+    .view-btn {
+      width: 32px; height: 32px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-400); font-size: 1rem;
+      transition: all 0.15s;
+    }
+    .view-btn.active { background: var(--pink-bg); color: var(--pink); }
+    .sort-btn {
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600; color: var(--gray-600);
+      border: 1.5px solid var(--gray-200);
+      transition: all 0.15s;
+    }
+    .sort-btn.active {
+      background: var(--pink-bg); color: var(--pink);
+      border-color: var(--pink-light);
+    }
+
+    /* FILE LIST */
+    .file-list-wrap { padding: 16px; }
+    .file-list { display: flex; flex-direction: column; gap: 10px; }
+    .file-card {
+      background: var(--white);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .file-card:active { transform: scale(0.98); }
+    .file-thumb {
+      width: 56px; height: 56px; border-radius: 8px;
+      background: var(--pink-bg);
+      flex-shrink: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+    }
+    .file-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-size: 0.875rem; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      margin-bottom: 4px;
+    }
+    .file-since { font-size: 0.75rem; color: var(--pink); font-weight: 600; }
+
+    /* GRID VIEW */
+    .file-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .file-grid-card {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--pink-bg);
+      cursor: pointer;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      transition: opacity 0.15s;
+    }
+    .file-grid-card:active { opacity: 0.8; }
+    .file-grid-card img { width: 100%; height: 100%; object-fit: cover; }
+    .file-grid-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.55));
+      padding: 6px 6px 4px;
+    }
+    .file-grid-name {
+      color: white; font-size: 0.6875rem; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      display: block;
+    }
+    .file-grid-since { color: rgba(255,255,255,0.85); font-size: 0.625rem; }
+
+    /* FILE DETAIL PAGE */
+    .file-detail-page { padding-bottom: 80px; }
+    .file-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--white);
+      border-bottom: 1px solid var(--pink-border);
+    }
+    .nav-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-600); font-size: 1.125rem;
+      transition: background 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) { background: var(--pink-bg); color: var(--pink); }
+    .nav-btn:disabled { opacity: 0.25; cursor: default; }
+    .nav-counter { font-size: 0.8125rem; color: var(--gray-600); font-weight: 500; }
+    .file-image-wrap {
+      width: 100%;
+      background: var(--gray-100);
+      display: flex; align-items: center; justify-content: center;
+      min-height: 240px; max-height: 360px; overflow: hidden;
+    }
+    .file-image-wrap img { width: 100%; max-height: 360px; object-fit: contain; }
+    .file-image-placeholder {
+      min-height: 200px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem; color: var(--gray-200);
+    }
+    .file-detail-info {
+      background: var(--white);
+      margin: 12px 16px;
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .file-detail-folder {
+      font-size: 0.8125rem; color: var(--gray-600);
+      margin-bottom: 4px; font-weight: 500;
+    }
+    .file-detail-order {
+      font-size: 0.8125rem; color: var(--pink); font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .detail-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label {
+      font-size: 0.75rem; color: var(--gray-400); font-weight: 500;
+      width: 36px; flex-shrink: 0; padding-top: 1px;
+    }
+    .detail-value { font-size: 0.875rem; color: var(--gray-800); font-weight: 500; line-height: 1.5; }
+    .detail-desc { font-size: 0.875rem; color: var(--gray-600); line-height: 1.6; word-break: break-all; }
+    .file-actions {
+      display: flex; gap: 10px;
+      margin: 12px 16px;
+    }
+    .btn-outline {
+      flex: 1; padding: 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem; font-weight: 600;
+      border: 1.5px solid var(--gray-200); color: var(--gray-600);
+      transition: all 0.15s;
+    }
+    .btn-outline:hover { border-color: var(--pink); color: var(--pink); background: var(--pink-bg); }
+    .btn-outline.danger:hover { border-color: #f44; color: #f44; background: #fff5f5; }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--white);
+      border-radius: 24px 24px 0 0;
+      padding: 8px 20px 40px;
+      width: 100%; max-height: 92vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-handle {
+      width: 40px; height: 4px; background: var(--gray-200);
+      border-radius: 2px; margin: 12px auto 20px;
+    }
+    .modal-title { font-size: 1.0625rem; font-weight: 700; margin-bottom: 20px; }
+    .modal-guide { font-size: 0.8125rem; color: var(--gray-400); margin-top: -14px; margin-bottom: 16px; }
+
+    /* FORM */
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 0.8125rem; font-weight: 600; color: var(--gray-600); margin-bottom: 6px; display: block; }
+    .form-label .req { color: var(--pink); }
+    .form-input {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem; color: var(--gray-800);
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .form-input:focus { border-color: var(--pink); }
+    .form-input.error { border-color: #f44; }
+    .form-error { font-size: 0.75rem; color: #f44; margin-top: 4px; display: none; }
+    .form-error.show { display: block; }
+    .form-counter { font-size: 0.75rem; color: var(--gray-400); text-align: right; margin-top: 4px; }
+    .form-textarea {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid var(--gray-200);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem; color: var(--gray-800);
+      resize: none; outline: none;
+      transition: border-color 0.15s;
+      line-height: 1.6;
+    }
+    .form-textarea:focus { border-color: var(--pink); }
+
+    /* IMAGE UPLOAD */
+    .img-upload-area {
+      width: 100%; aspect-ratio: 4/3;
+      border: 2px dashed var(--pink-border);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; cursor: pointer;
+      background: var(--pink-bg);
+      transition: background 0.15s;
+      overflow: hidden; position: relative;
+    }
+    .img-upload-area:hover { background: #ffe4f0; }
+    .img-upload-area img {
+      width: 100%; height: 100%; object-fit: cover;
+      position: absolute; inset: 0;
+    }
+    .img-upload-text { font-size: 0.8125rem; color: var(--gray-600); }
+    .img-upload-icon { font-size: 2rem; }
+    .img-remove-btn {
+      position: absolute; top: 8px; right: 8px; z-index: 1;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(0,0,0,0.5); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.875rem;
+    }
+
+    /* SUBMIT BTN */
+    .btn-primary {
+      width: 100%; padding: 14px;
+      background: var(--pink); color: white;
+      border-radius: var(--radius-sm);
+      font-size: 1rem; font-weight: 700;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-primary:hover { background: var(--pink-hover); }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* UNIT CHIPS */
+    .unit-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .unit-chip {
+      padding: 6px 14px; border-radius: 20px;
+      border: 1.5px solid var(--gray-200);
+      font-size: 0.8125rem; color: var(--gray-600);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .unit-chip.selected { background: var(--pink-bg); border-color: var(--pink-light); color: var(--pink); font-weight: 600; }
+    .unit-custom-wrap { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+    .unit-custom-input {
+      flex: 1; padding: 8px 12px;
+      border: 1.5px solid var(--gray-200); border-radius: 20px;
+      font-size: 0.8125rem; outline: none;
+      transition: border-color 0.15s;
+    }
+    .unit-custom-input:focus { border-color: var(--pink); }
+
+    /* SETTINGS MODAL */
+    .settings-list { display: flex; flex-direction: column; gap: 0; }
+    .settings-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--gray-200);
+      cursor: pointer;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row-label { font-size: 0.9375rem; color: var(--gray-800); }
+    .settings-row-value { font-size: 0.875rem; color: var(--gray-400); }
+    .settings-row.danger .settings-row-label { color: #f44; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: rgba(45,45,45,0.92); color: white;
+      padding: 10px 20px; border-radius: 24px;
+      font-size: 0.875rem; font-weight: 500;
+      z-index: 500; opacity: 0; pointer-events: none;
+      transition: all 0.25s; white-space: nowrap;
+      max-width: calc(100% - 40px);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* CONFIRM */
+    .confirm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 300;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .confirm-box {
+      background: var(--white); border-radius: var(--radius);
+      padding: 24px 20px; width: 100%; max-width: 320px;
+    }
+    .confirm-title { font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .confirm-msg { font-size: 0.875rem; color: var(--gray-600); line-height: 1.6; margin-bottom: 20px; }
+    .confirm-btns { display: flex; gap: 10px; }
+    .btn-cancel {
+      flex: 1; padding: 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem; font-weight: 600;
+      background: var(--gray-100); color: var(--gray-600);
+    }
+    .btn-danger {
+      flex: 1; padding: 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9375rem; font-weight: 600;
+      background: #ff4444; color: white;
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center; padding: 48px 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .empty-icon { font-size: 3rem; opacity: 0.4; }
+    .empty-text { font-size: 0.9375rem; color: var(--gray-400); line-height: 1.6; }
+
+    /* NICKNAME EDIT */
+    .nickname-section {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nickname-edit-btn {
+      font-size: 0.875rem; color: var(--gray-400); padding: 2px 6px;
+      border-radius: 4px; transition: color 0.15s;
+    }
+    .nickname-edit-btn:hover { color: var(--pink); }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="modal-root"></div>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // ─── STORAGE (IndexedDB) ───────────────────────────────────────────────────
+    const DB = (() => {
+      let _db = null;
+
+      function open() {
+        if (_db) return Promise.resolve(_db);
+        return new Promise((res, rej) => {
+          const req = indexedDB.open('dokidoki', 1);
+          req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('folders'))
+              db.createObjectStore('folders', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('files'))
+              db.createObjectStore('files', { keyPath: 'id' });
+          };
+          req.onsuccess = e => { _db = e.target.result; res(_db); };
+          req.onerror = e => rej(e.target.error);
+        });
+      }
+
+      async function tx(store, mode, fn) {
+        const db = await open();
+        return new Promise((res, rej) => {
+          const t = db.transaction(store, mode);
+          const s = t.objectStore(store);
+          const req = fn(s);
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+      }
+
+      async function getAll(store) {
+        const db = await open();
+        return new Promise((res, rej) => {
+          const req = db.transaction(store, 'readonly').objectStore(store).getAll();
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+      }
+
+      return {
+        init: open,
+
+        // Nickname: tiny string → localStorage OK
+        getNickname: () => localStorage.getItem('doki_nickname') || '익명',
+        setNickname: n => { localStorage.setItem('doki_nickname', n); },
+
+        // Folders
+        getFolders: () => getAll('folders').then(r => r.sort((a, b) => a.order - b.order)),
+        getFolder: id => tx('folders', 'readonly', s => s.get(id)),
+        async createFolder(name, unit) {
+          const folders = await this.getFolders();
+          if (folders.length >= 5) return null;
+          if (folders.find(f => trimName(f.name) === trimName(name))) return 'dup';
+          const f = { id: uid(), name: trimName(name), unit, order: folders.length, createdAt: today() };
+          await tx('folders', 'readwrite', s => s.put(f));
+          return f;
+        },
+        async updateFolder(id, data) {
+          const folder = await this.getFolder(id);
+          if (!folder) return;
+          if (data.name) {
+            const folders = await this.getFolders();
+            if (folders.find(f => f.id !== id && trimName(f.name) === trimName(data.name))) return 'dup';
+            data.name = trimName(data.name);
+          }
+          const updated = { ...folder, ...data };
+          await tx('folders', 'readwrite', s => s.put(updated));
+          return updated;
+        },
+        async deleteFolder(id) {
+          await tx('folders', 'readwrite', s => s.delete(id));
+          const files = await this.getFolderFiles(id);
+          const db = await open();
+          await new Promise((res, rej) => {
+            const t = db.transaction('files', 'readwrite');
+            const s = t.objectStore('files');
+            files.forEach(f => s.delete(f.id));
+            t.oncomplete = res; t.onerror = rej;
+          });
+        },
+
+        // Files
+        getFiles: () => getAll('files'),
+        getFolderFiles: id => getAll('files').then(r => r.filter(f => f.folderId === id)),
+        getFile: id => tx('files', 'readonly', s => s.get(id)),
+        async createFile(data) {
+          const f = { id: uid(), ...data, createdAt: today() };
+          await tx('files', 'readwrite', s => s.put(f));
+          return f;
+        },
+        async updateFile(id, data) {
+          const file = await this.getFile(id);
+          if (!file) return;
+          const updated = { ...file, ...data };
+          await tx('files', 'readwrite', s => s.put(updated));
+          return updated;
+        },
+        deleteFile: id => tx('files', 'readwrite', s => s.delete(id)),
+      };
+    })();
+
+    // ─── UTILS ─────────────────────────────────────────────────────────────────
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+    function today() { return new Date().toISOString().slice(0, 10); }
+    function trimName(s) { return (s || '').trim().replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, ''); }
+
+    function dday(dateStr) {
+      if (!dateStr) return null;
+      const d = new Date(dateStr + 'T00:00:00');
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      const diff = Math.floor((now - d) / 86400000) + 1;
+      return diff > 0 ? diff : null;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      return dateStr.replace(/-/g, '.');
+    }
+
+    function ellipsis(text, maxLen) {
+      if (!text || text.length <= maxLen) return text || '';
+      return text.slice(0, maxLen) + '…';
+    }
+
+    function formatAmount(n) {
+      if (n === null || n === undefined || n === '') return '';
+      return Number(n).toLocaleString('ko-KR') + '원';
+    }
+
+    async function getLatestFileImage(folderId) {
+      const files = (await DB.getFolderFiles(folderId)).filter(f => f.imageData);
+      if (!files.length) return null;
+      return files.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))[0].imageData;
+    }
+
+    async function getLongestDday() {
+      const files = (await DB.getFiles()).filter(f => f.date);
+      if (!files.length) return null;
+      const sorted = files.sort((a, b) => a.date.localeCompare(b.date));
+      return dday(sorted[0].date);
+    }
+
+    async function getFolderOldestDday(folderId) {
+      const files = (await DB.getFolderFiles(folderId)).filter(f => f.date);
+      if (!files.length) return null;
+      const sorted = files.sort((a, b) => a.date.localeCompare(b.date));
+      return { days: dday(sorted[0].date), date: sorted[0].date };
+    }
+
+    async function getSortedFiles(folderId, sort = 'newest') {
+      const files = await DB.getFolderFiles(folderId);
+      return files.sort((a, b) => {
+        const da = a.date || a.createdAt, db = b.date || b.createdAt;
+        return sort === 'newest' ? db.localeCompare(da) : da.localeCompare(db);
+      });
+    }
+
+    function toBase64(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            const MAX = 1200;
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) {
+              if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+              else { w = Math.round(w * MAX / h); h = MAX; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            res(canvas.toDataURL('image/jpeg', 0.75));
+          };
+          img.onerror = rej;
+          img.src = e.target.result;
+        };
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+    }
+
+    // ─── ROUTER ────────────────────────────────────────────────────────────────
+    let state = {
+      view: 'folders',
+      folderId: null,
+      fileId: null,
+      sort: 'newest',
+      viewType: 'list',
+    };
+
+    async function navigate(view, params = {}) {
+      state = { ...state, view, ...params };
+      await render();
+    }
+
+    // ─── RENDER ────────────────────────────────────────────────────────────────
+    async function render() {
+      const app = document.getElementById('app');
+      if (state.view === 'folders') app.innerHTML = await renderFoldersPage();
+      else if (state.view === 'folderDetail') app.innerHTML = await renderFolderDetailPage();
+      else if (state.view === 'fileDetail') app.innerHTML = await renderFileDetailPage();
+      bindEvents();
+    }
+
+    // ─── FOLDERS PAGE ──────────────────────────────────────────────────────────
+    async function renderFoldersPage() {
+      const nickname = DB.getNickname();
+      const folders = await DB.getFolders();
+      const longestDday = await getLongestDday();
+      const folderCount = folders.length;
+      const cards = await Promise.all(folders.map(f => renderFolderCard(f)));
+
+      return `
+        <div class="page">
+          <div class="header">
+            <span class="header-logo">ドキドキ</span>
+            <button class="icon-btn" id="settingsBtn" title="설정">⚙️</button>
+          </div>
+          <div class="profile-section">
+            <div class="profile-greeting">
+              <div class="nickname-section">
+                <span class="nickname">${escHtml(ellipsis(nickname, 10))}</span>님의 ドキドキ 🏠
+                <button class="nickname-edit-btn" id="editNicknameBtn">✏️</button>
+              </div>
+            </div>
+            <div class="profile-stats">
+              <div class="stat-chip">
+                <div class="stat-value">${folderCount}</div>
+                <div class="stat-label">입주한 최애 수</div>
+              </div>
+              <div class="stat-chip">
+                <div class="stat-value">${longestDday ? '+' + longestDday + '일' : '-'}</div>
+                <div class="stat-label">가장 오래된 최애의 입주일</div>
+              </div>
+            </div>
+          </div>
+          <div class="folder-list">
+            ${cards.join('')}
+            ${folders.length < 5 ? `<button class="add-btn" id="addFolderBtn">＋ 폴더 추가하기</button>` : ''}
+          </div>
+          ${folders.length === 0 ? `
+            <div class="empty-state">
+              <div class="empty-icon">🐾</div>
+              <div class="empty-text">아직 폴더가 없어요.<br>아래 버튼으로 첫 폴더를 만들어보세요!</div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    async function renderFolderCard(f) {
+      const files = await DB.getFolderFiles(f.id);
+      const ddayInfo = await getFolderOldestDday(f.id);
+      const imgData = await getLatestFileImage(f.id);
+      const thumbHtml = imgData ? `<img src="${imgData}" alt="">` : `🐾`;
+      return `
+        <div class="folder-card" data-folder-id="${f.id}">
+          <div class="folder-thumbnail">${thumbHtml}</div>
+          <div class="folder-info">
+            <div class="folder-name">${escHtml(f.name)}</div>
+            ${ddayInfo && ddayInfo.days ? `<div class="folder-since">+${ddayInfo.days}일째</div>` : ''}
+            <div class="folder-count">${files.length}${f.unit} 입주중</div>
+          </div>
+          <span class="folder-arrow">›</span>
+        </div>
+      `;
+    }
+
+    // ─── FOLDER DETAIL PAGE ────────────────────────────────────────────────────
+    async function renderFolderDetailPage() {
+      const folder = await DB.getFolder(state.folderId);
+      if (!folder) { navigate('folders'); return ''; }
+      const nickname = DB.getNickname();
+      const ddayInfo = await getFolderOldestDday(folder.id);
+      const files = await getSortedFiles(folder.id, state.sort);
+
+      const fileCards = state.viewType === 'grid'
+        ? files.map(f => renderFileGridCard(f)).join('')
+        : files.map(f => renderFileListCard(f)).join('');
+
+      return `
+        <div class="page">
+          <div class="header">
+            <div class="header-left">
+              <button class="back-btn" id="backBtn">‹</button>
+              <span class="header-title">${escHtml(ellipsis(folder.name, 12))}</span>
+            </div>
+            <button class="icon-btn" id="folderSettingsBtn">⚙️</button>
+          </div>
+
+          <div class="folder-info-block">
+            <div class="folder-info-title">
+              <span class="highlight">${escHtml(ellipsis(nickname, 8))}</span>의
+              <span class="highlight">${escHtml(folder.name)}</span> 입주 중<br>
+              ${ddayInfo && ddayInfo.days ? `+${ddayInfo.days}일째 since ${formatDate(ddayInfo.date)}~<br>` : ''}
+              ${files.length}${folder.unit} 입주중
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <div class="filter-left">
+              <button class="view-btn ${state.viewType === 'list' ? 'active' : ''}" id="viewListBtn" title="리스트 뷰">☰</button>
+              <button class="view-btn ${state.viewType === 'grid' ? 'active' : ''}" id="viewGridBtn" title="그리드 뷰">⊞</button>
+            </div>
+            <div class="filter-right">
+              <button class="sort-btn ${state.sort === 'newest' ? 'active' : ''}" id="sortNewestBtn">최신순</button>
+              <button class="sort-btn ${state.sort === 'oldest' ? 'active' : ''}" id="sortOldestBtn">오랜순</button>
+            </div>
+          </div>
+
+          <div class="file-list-wrap">
+            ${files.length === 0 ? `
+              <div class="empty-state">
+                <div class="empty-icon">📂</div>
+                <div class="empty-text">아직 기록이 없어요.<br>첫 추억을 남겨보세요!</div>
+              </div>
+            ` : state.viewType === 'grid'
+              ? `<div class="file-grid">${fileCards}</div>`
+              : `<div class="file-list">${fileCards}</div>`
+            }
+            <div style="height:16px"></div>
+            <button class="add-btn" id="addFileBtn">＋ 추억 추가하기</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFileListCard(file) {
+      const ddayNum = dday(file.date);
+      const thumbHtml = file.imageData ? `<img src="${file.imageData}" alt="">` : `🐾`;
+      return `
+        <div class="file-card" data-file-id="${file.id}">
+          <div class="file-thumb">${thumbHtml}</div>
+          <div class="file-info">
+            <div class="file-name">${escHtml(file.name)}</div>
+            ${ddayNum ? `<div class="file-since">+${ddayNum}일째</div>` : ''}
+          </div>
+          <span style="color:var(--gray-400);font-size:1rem">›</span>
+        </div>
+      `;
+    }
+
+    function renderFileGridCard(file) {
+      const ddayNum = dday(file.date);
+      if (file.imageData) {
+        return `
+          <div class="file-grid-card" data-file-id="${file.id}">
+            <img src="${file.imageData}" alt="">
+            <div class="file-grid-overlay">
+              <span class="file-grid-name">${escHtml(file.name)}</span>
+              ${ddayNum ? `<span class="file-grid-since">+${ddayNum}일째</span>` : ''}
+            </div>
+          </div>
+        `;
+      }
+      return `
+        <div class="file-grid-card" data-file-id="${file.id}" style="flex-direction:column;gap:4px">
+          <span>🐾</span>
+          <span style="font-size:0.65rem;color:var(--gray-600);text-align:center;padding:0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">${escHtml(file.name)}</span>
+          ${ddayNum ? `<span style="font-size:0.6rem;color:var(--pink)">+${ddayNum}일째</span>` : ''}
+        </div>
+      `;
+    }
+
+    // ─── FILE DETAIL PAGE ──────────────────────────────────────────────────────
+    async function renderFileDetailPage() {
+      const file = await DB.getFile(state.fileId);
+      if (!file) { navigate('folderDetail', { folderId: state.folderId }); return ''; }
+      const folder = await DB.getFolder(state.folderId);
+      if (!folder) { navigate('folders'); return ''; }
+
+      const files = await getSortedFiles(state.folderId, state.sort);
+      const idx = files.findIndex(f => f.id === file.id);
+      const total = files.length;
+      const prevFile = idx > 0 ? files[idx - 1] : null;
+      const nextFile = idx < total - 1 ? files[idx + 1] : null;
+
+      const ddayNum = dday(file.date);
+      const orderInFolder = idx + 1;
+      const orderText = ['첫번째', '두번째', '세번째', '네번째', '다섯번째',
+        '여섯번째', '일곱번째', '여덟번째', '아홉번째', '열번째'][orderInFolder - 1]
+        || `${orderInFolder}번째`;
+
+      return `
+        <div class="page file-detail-page">
+          <div class="header">
+            <div class="header-left">
+              <button class="back-btn" id="backBtn">‹</button>
+              <span class="header-title">${escHtml(ellipsis(folder.name, 12))}</span>
+            </div>
+            <div style="display:flex;gap:4px">
+              <button class="icon-btn" id="editFileBtn" title="수정">✏️</button>
+              <button class="icon-btn" id="deleteFileBtn" title="삭제">🗑️</button>
+            </div>
+          </div>
+
+          <div class="file-nav">
+            <button class="nav-btn" id="prevFileBtn" ${!prevFile ? 'disabled' : ''} data-file-id="${prevFile?.id || ''}">‹</button>
+            <span class="nav-counter">${orderInFolder} / ${total}</span>
+            <button class="nav-btn" id="nextFileBtn" ${!nextFile ? 'disabled' : ''} data-file-id="${nextFile?.id || ''}">›</button>
+          </div>
+
+          ${file.imageData
+            ? `<div class="file-image-wrap"><img src="${file.imageData}" alt=""></div>`
+            : `<div class="file-image-wrap file-image-placeholder">📷</div>`
+          }
+
+          <div class="file-detail-info">
+            <div class="file-detail-folder">${escHtml(folder.name)}</div>
+            <div class="file-detail-order">
+              날짜 기준 ${orderText} 기록
+              ${ddayNum ? ` · +${ddayNum}일째` : ''}
+            </div>
+
+            ${file.date ? `
+              <div class="detail-row">
+                <span class="detail-label">날짜</span>
+                <span class="detail-value">${formatDate(file.date)}${ddayNum ? ` (+${ddayNum}일째)` : ''}</span>
+              </div>
+            ` : ''}
+            <div class="detail-row">
+              <span class="detail-label">이름</span>
+              <span class="detail-value">${escHtml(file.name)}</span>
+            </div>
+            ${file.location ? `
+              <div class="detail-row">
+                <span class="detail-label">장소</span>
+                <span class="detail-value">${escHtml(file.location)}</span>
+              </div>
+            ` : ''}
+            ${file.amount !== null && file.amount !== undefined && file.amount !== '' ? `
+              <div class="detail-row">
+                <span class="detail-label">금액</span>
+                <span class="detail-value">${formatAmount(file.amount)}</span>
+              </div>
+            ` : ''}
+            ${file.description ? `
+              <div class="detail-row" style="flex-direction:column;gap:6px">
+                <span class="detail-label">설명</span>
+                <span class="detail-desc">${escHtml(file.description)}</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // ─── EVENTS ────────────────────────────────────────────────────────────────
+    function bindEvents() {
+      document.querySelectorAll('[data-folder-id]').forEach(node => {
+        node.addEventListener('click', () => navigate('folderDetail', { folderId: node.dataset.folderId, sort: 'newest', viewType: 'list' }));
+      });
+      el('addFolderBtn')?.addEventListener('click', () => showCreateFolderModal());
+      el('settingsBtn')?.addEventListener('click', () => showSettingsModal());
+      el('editNicknameBtn')?.addEventListener('click', () => showNicknameModal());
+
+      el('backBtn')?.addEventListener('click', () => {
+        if (state.view === 'folderDetail') navigate('folders');
+        else if (state.view === 'fileDetail') navigate('folderDetail', { folderId: state.folderId });
+      });
+      el('folderSettingsBtn')?.addEventListener('click', () => showFolderSettingsModal(state.folderId));
+      el('addFileBtn')?.addEventListener('click', () => showCreateFileModal(state.folderId));
+      el('viewListBtn')?.addEventListener('click', () => { state.viewType = 'list'; render(); });
+      el('viewGridBtn')?.addEventListener('click', () => { state.viewType = 'grid'; render(); });
+      el('sortNewestBtn')?.addEventListener('click', () => { state.sort = 'newest'; render(); });
+      el('sortOldestBtn')?.addEventListener('click', () => { state.sort = 'oldest'; render(); });
+
+      document.querySelectorAll('[data-file-id]').forEach(node => {
+        node.addEventListener('click', () => navigate('fileDetail', { fileId: node.dataset.fileId, folderId: state.folderId }));
+      });
+
+      el('editFileBtn')?.addEventListener('click', () => showEditFileModal(state.fileId, state.folderId));
+      el('deleteFileBtn')?.addEventListener('click', () => confirmDeleteFile(state.fileId, state.folderId));
+      el('prevFileBtn')?.addEventListener('click', e => {
+        const fid = e.currentTarget.dataset.fileId;
+        if (fid) navigate('fileDetail', { fileId: fid, folderId: state.folderId });
+      });
+      el('nextFileBtn')?.addEventListener('click', e => {
+        const fid = e.currentTarget.dataset.fileId;
+        if (fid) navigate('fileDetail', { fileId: fid, folderId: state.folderId });
+      });
+    }
+
+    function el(id) { return document.getElementById(id); }
+    function escHtml(s) {
+      return (s || '').toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // ─── MODALS ────────────────────────────────────────────────────────────────
+    function showModal(html, onOpen) {
+      const root = document.getElementById('modal-root');
+      root.innerHTML = html;
+      requestAnimationFrame(() => {
+        root.querySelector('.modal-overlay')?.classList.add('open');
+        onOpen?.();
+      });
+    }
+
+    function closeModal() {
+      const overlay = document.querySelector('.modal-overlay');
+      if (overlay) {
+        overlay.classList.remove('open');
+        setTimeout(() => { document.getElementById('modal-root').innerHTML = ''; }, 300);
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    // ─── NICKNAME MODAL ────────────────────────────────────────────────────────
+    async function showNicknameModal() {
+      const cur = DB.getNickname();
+      showModal(`
+        <div class="modal-overlay" id="modalOverlay">
+          <div class="modal">
+            <div class="modal-handle"></div>
+            <div class="modal-title">닉네임 변경</div>
+            <div class="form-group">
+              <label class="form-label">닉네임 <span class="req">*</span></label>
+              <input class="form-input" id="nicknameInput" type="text" value="${escHtml(cur)}"
+                maxlength="20" placeholder="닉네임을 입력해주세요">
+              <div class="form-counter"><span id="nicknameCount">${cur.length}</span> / 20</div>
+            </div>
+            <button class="btn-primary" id="saveNicknameBtn">저장</button>
+          </div>
+        </div>
+      `);
+      el('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+      const inp = el('nicknameInput');
+      inp.addEventListener('input', () => { el('nicknameCount').textContent = inp.value.length; });
+      inp.focus(); inp.select();
+      el('saveNicknameBtn').addEventListener('click', () => {
+        const val = inp.value.trim();
+        if (!val) { showToast('닉네임을 입력해주세요'); return; }
+        if (val.includes(' ')) { showToast('닉네임에 띄어쓰기는 불가능해요'); return; }
+        DB.setNickname(val);
+        closeModal(); render().then(() => showToast('닉네임이 변경되었어요 ✨'));
+      });
+    }
+
+    // ─── CREATE FOLDER MODAL ───────────────────────────────────────────────────
+    const UNIT_PRESETS = ['마리', '명', '개', '장', '권'];
+    async function showCreateFolderModal(editFolderId = null) {
+      const existing = editFolderId ? await DB.getFolder(editFolderId) : null;
+      const isEdit = !!existing;
+      let selectedUnit = existing?.unit || '마리';
+
+      showModal(`
+        <div class="modal-overlay" id="modalOverlay">
+          <div class="modal">
+            <div class="modal-handle"></div>
+            <div class="modal-title">${isEdit ? '폴더 수정' : '폴더 추가하기'}</div>
+            ${!isEdit ? '<div class="modal-guide">*폴더 이름이 내가 덕질하는 최애 이름이 됩니다. (ex. 치이카와)</div>' : ''}
+            <div class="form-group">
+              <label class="form-label">폴더 이름 <span class="req">*</span></label>
+              <input class="form-input" id="folderNameInput" type="text"
+                value="${existing ? escHtml(existing.name) : ''}"
+                maxlength="30" placeholder="폴더 이름을 입력해주세요">
+              <div id="folderNameError" class="form-error">같은 이름의 폴더가 이미 존재합니다.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">단위</label>
+              <div class="unit-chips" id="unitChips">
+                ${UNIT_PRESETS.map(u => `<button class="unit-chip ${selectedUnit === u ? 'selected' : ''}" data-unit="${u}">${u}</button>`).join('')}
+                <button class="unit-chip ${!UNIT_PRESETS.includes(selectedUnit) ? 'selected' : ''}" id="customUnitChip" data-unit="custom">직접 입력</button>
+              </div>
+              <div class="unit-custom-wrap" id="customUnitWrap" style="display:${!UNIT_PRESETS.includes(selectedUnit) ? 'flex' : 'none'}">
+                <input class="unit-custom-input" id="customUnitInput" type="text" placeholder="단위 입력" maxlength="6"
+                  value="${!UNIT_PRESETS.includes(selectedUnit) ? escHtml(selectedUnit) : ''}">
+              </div>
+            </div>
+            <button class="btn-primary" id="saveFolderBtn">${isEdit ? '수정 완료' : '폴더 만들기'}</button>
+          </div>
+        </div>
+      `);
+
+      el('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+      document.querySelectorAll('.unit-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          document.querySelectorAll('.unit-chip').forEach(c => c.classList.remove('selected'));
+          chip.classList.add('selected');
+          selectedUnit = chip.dataset.unit === 'custom' ? (el('customUnitInput')?.value || '') : chip.dataset.unit;
+          el('customUnitWrap').style.display = chip.dataset.unit === 'custom' ? 'flex' : 'none';
+        });
+      });
+
+      el('customUnitInput')?.addEventListener('input', e => { selectedUnit = e.target.value || '개'; });
+      el('folderNameInput').focus();
+
+      el('saveFolderBtn').addEventListener('click', async () => {
+        const name = el('folderNameInput').value.trim();
+        const unit = UNIT_PRESETS.includes(selectedUnit) ? selectedUnit : (el('customUnitInput')?.value?.trim() || '개');
+        el('folderNameError').classList.remove('show');
+        if (!name) { showToast('폴더 이름을 입력해주세요'); return; }
+
+        if (isEdit) {
+          const result = await DB.updateFolder(editFolderId, { name, unit });
+          if (result === 'dup') { el('folderNameError').classList.add('show'); return; }
+          closeModal(); await render(); showToast('폴더가 수정되었어요 ✨');
+        } else {
+          const result = await DB.createFolder(name, unit);
+          if (result === null) { showToast('폴더는 최대 5개까지 만들 수 있어요'); return; }
+          if (result === 'dup') { el('folderNameError').classList.add('show'); return; }
+          closeModal(); await render(); showToast('폴더가 생성되었어요 🎉');
+        }
+      });
+    }
+
+    // ─── FOLDER SETTINGS MODAL ─────────────────────────────────────────────────
+    async function showFolderSettingsModal(folderId) {
+      const folder = await DB.getFolder(folderId);
+      if (!folder) return;
+      showModal(`
+        <div class="modal-overlay" id="modalOverlay">
+          <div class="modal">
+            <div class="modal-handle"></div>
+            <div class="modal-title">폴더 설정</div>
+            <div class="settings-list">
+              <div class="settings-row" id="editFolderNameBtn">
+                <span class="settings-row-label">폴더 이름 / 단위 변경</span>
+                <span class="settings-row-value">${escHtml(folder.name)} / ${escHtml(folder.unit)} ›</span>
+              </div>
+              <div class="settings-row danger" id="deleteFolderBtn">
+                <span class="settings-row-label">폴더 삭제</span>
+                <span class="settings-row-value">›</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+      el('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+      el('editFolderNameBtn').addEventListener('click', () => { closeModal(); setTimeout(() => showCreateFolderModal(folderId), 300); });
+      el('deleteFolderBtn').addEventListener('click', () => {
+        closeModal();
+        setTimeout(() => confirmDeleteFolder(folderId), 300);
+      });
+    }
+
+    // ─── SETTINGS MODAL ────────────────────────────────────────────────────────
+    function showSettingsModal() {
+      const nickname = DB.getNickname();
+      showModal(`
+        <div class="modal-overlay" id="modalOverlay">
+          <div class="modal">
+            <div class="modal-handle"></div>
+            <div class="modal-title">설정</div>
+            <div class="settings-list">
+              <div class="settings-row" id="changeNicknameBtn">
+                <span class="settings-row-label">닉네임 변경</span>
+                <span class="settings-row-value">${escHtml(nickname)} ›</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+      el('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+      el('changeNicknameBtn').addEventListener('click', () => { closeModal(); setTimeout(() => showNicknameModal(), 300); });
+    }
+
+    // ─── CREATE / EDIT FILE MODAL ──────────────────────────────────────────────
+    async function showCreateFileModal(folderId, editFileId = null) {
+      const existing = editFileId ? await DB.getFile(editFileId) : null;
+      const isEdit = !!existing;
+      let imageData = existing?.imageData || null;
+
+      showModal(`
+        <div class="modal-overlay" id="modalOverlay">
+          <div class="modal">
+            <div class="modal-handle"></div>
+            <div class="modal-title">${isEdit ? '파일 수정' : '추억 추가하기'}</div>
+
+            <div class="form-group">
+              <label class="form-label">사진 <span class="req">*</span></label>
+              <div class="img-upload-area" id="imgUploadArea">
+                ${imageData
+                  ? `<img id="imgPreview" src="${imageData}" alt=""><button class="img-remove-btn" id="imgRemoveBtn">✕</button>`
+                  : `<span class="img-upload-icon">📷</span><span class="img-upload-text">사진을 추가해주세요</span>`
+                }
+              </div>
+              <input type="file" id="imgFileInput" accept="image/png,image/jpg,image/jpeg" style="display:none">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">이름 <span class="req">*</span></label>
+              <input class="form-input" id="fileNameInput" type="text"
+                value="${existing ? escHtml(existing.name) : ''}"
+                maxlength="30" placeholder="캐릭터 이름">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">날짜</label>
+              <input class="form-input" id="fileDateInput" type="date"
+                value="${existing?.date || ''}" max="${today()}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">장소</label>
+              <input class="form-input" id="fileLocationInput" type="text"
+                value="${existing ? escHtml(existing.location || '') : ''}"
+                maxlength="50" placeholder="구매/방문 장소">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">금액</label>
+              <input class="form-input" id="fileAmountInput" type="text" inputmode="numeric"
+                value="${existing?.amount !== null && existing?.amount !== undefined ? Number(existing.amount).toLocaleString('ko-KR') : ''}"
+                placeholder="0">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">설명 <span id="descCounter" style="font-weight:400;color:var(--gray-400)">${existing?.description?.length || 0} / 600</span></label>
+              <textarea class="form-textarea" id="fileDescInput" rows="4"
+                maxlength="600" placeholder="자유롭게 기록해보세요 (특수문자, 이모지 가능)">${existing ? escHtml(existing.description || '') : ''}</textarea>
+            </div>
+
+            <button class="btn-primary" id="saveFileBtn" ${(!isEdit && !imageData) ? 'disabled' : ''}>${isEdit ? '수정 완료' : '저장하기'}</button>
+          </div>
+        </div>
+      `);
+
+      el('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+      const checkSaveBtn = () => {
+        const name = el('fileNameInput')?.value.trim();
+        el('saveFileBtn').disabled = !imageData || !name;
+      };
+
+      el('imgUploadArea').addEventListener('click', e => {
+        if (e.target.id === 'imgRemoveBtn') {
+          imageData = null;
+          el('imgUploadArea').innerHTML = `<span class="img-upload-icon">📷</span><span class="img-upload-text">사진을 추가해주세요</span>`;
+          checkSaveBtn();
+          return;
+        }
+        el('imgFileInput').click();
+      });
+
+      el('imgFileInput').addEventListener('change', async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) { showToast('10MB 이하의 이미지만 가능해요'); return; }
+        imageData = await toBase64(file);
+        el('imgUploadArea').innerHTML = `<img id="imgPreview" src="${imageData}" alt=""><button class="img-remove-btn" id="imgRemoveBtn">✕</button>`;
+        el('imgRemoveBtn').addEventListener('click', e => {
+          e.stopPropagation();
+          imageData = null;
+          el('imgUploadArea').innerHTML = `<span class="img-upload-icon">📷</span><span class="img-upload-text">사진을 추가해주세요</span>`;
+          checkSaveBtn();
+        });
+        checkSaveBtn();
+      });
+
+      el('fileNameInput').addEventListener('input', checkSaveBtn);
+      el('fileAmountInput').addEventListener('input', e => {
+        const raw = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = raw ? Number(raw).toLocaleString('ko-KR') : '';
+      });
+      el('fileDescInput').addEventListener('input', () => {
+        el('descCounter').textContent = `${el('fileDescInput').value.length} / 600`;
+      });
+
+      el('saveFileBtn').addEventListener('click', async () => {
+        const name = el('fileNameInput').value.trim();
+        if (!imageData) { showToast('사진을 추가해주세요'); return; }
+        if (!name) { showToast('이름을 입력해주세요'); return; }
+
+        el('saveFileBtn').disabled = true;
+        el('saveFileBtn').textContent = '저장 중...';
+
+        const data = {
+          folderId,
+          imageData,
+          name,
+          date: el('fileDateInput').value || null,
+          location: el('fileLocationInput').value.trim() || null,
+          amount: el('fileAmountInput').value !== '' ? Number(el('fileAmountInput').value.replace(/,/g, '')) : null,
+          description: el('fileDescInput').value.trim() || null,
+        };
+
+        if (isEdit) {
+          await DB.updateFile(editFileId, data);
+          closeModal();
+          await render();
+          showToast('수정되었어요 ✨');
+        } else {
+          await DB.createFile(data);
+          closeModal();
+          await render();
+          showToast('저장되었어요 🎉');
+        }
+      });
+    }
+
+    function showEditFileModal(fileId, folderId) {
+      showCreateFileModal(folderId, fileId);
+    }
+
+    // ─── CONFIRM DIALOGS ───────────────────────────────────────────────────────
+    function showConfirm({ title, msg, confirmText, onConfirm, isDanger = true }) {
+      const root = document.getElementById('modal-root');
+      root.insertAdjacentHTML('beforeend', `
+        <div class="confirm-overlay" id="confirmOverlay">
+          <div class="confirm-box">
+            <div class="confirm-title">${escHtml(title)}</div>
+            <div class="confirm-msg">${escHtml(msg)}</div>
+            <div class="confirm-btns">
+              <button class="btn-cancel" id="confirmCancelBtn">취소</button>
+              <button class="${isDanger ? 'btn-danger' : 'btn-primary'}" id="confirmOkBtn">${escHtml(confirmText)}</button>
+            </div>
+          </div>
+        </div>
+      `);
+      document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+        document.getElementById('confirmOverlay').remove();
+      });
+      document.getElementById('confirmOkBtn').addEventListener('click', () => {
+        document.getElementById('confirmOverlay').remove();
+        onConfirm();
+      });
+    }
+
+    async function confirmDeleteFile(fileId, folderId) {
+      const file = await DB.getFile(fileId);
+      if (!file) return;
+      showConfirm({
+        title: '파일 삭제',
+        msg: `${file.name}을 삭제하면 복구할 수 없어요. 삭제하겠어요?`,
+        confirmText: '삭제',
+        onConfirm: async () => {
+          await DB.deleteFile(fileId);
+          navigate('folderDetail', { folderId });
+          showToast('삭제되었어요');
+        }
+      });
+    }
+
+    async function confirmDeleteFolder(folderId) {
+      const folder = await DB.getFolder(folderId);
+      if (!folder) return;
+      const files = await DB.getFolderFiles(folderId);
+      showConfirm({
+        title: '폴더 삭제',
+        msg: `${folder.name} 폴더와 안의 파일 ${files.length}개가 모두 삭제돼요. 복구할 수 없어요.`,
+        confirmText: '삭제',
+        onConfirm: async () => {
+          await DB.deleteFolder(folderId);
+          navigate('folders');
+          showToast('폴더가 삭제되었어요');
+        }
+      });
+    }
+
+    // ─── INIT ──────────────────────────────────────────────────────────────────
+    (async () => {
+      await DB.init();
+      await render();
+    })();
+  </script>
+</body>
+</html>
