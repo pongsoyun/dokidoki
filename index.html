@@ -501,46 +501,133 @@
   <div id="modal-root"></div>
   <div id="toast" class="toast"></div>
 
-  <script type="module">
-    // ─── FIREBASE ──────────────────────────────────────────────────────────────
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-    import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-    import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js';
+  <script>
+    // ─── FIREBASE REST API ──────────────────────────────────────────────────────
+    const PROJECT = 'dokidoki-b03c6';
+    const API_KEY = 'AIzaSyCDtu-I65fGds2hcN-ze9YAmtLHhN4HQnk';
+    const FS_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+    const ST_BASE = `https://firebasestorage.googleapis.com/v0/b/${PROJECT}.firebasestorage.app/o`;
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCDtu-I65fGds2hcN-ze9YAmtLHhN4HQnk",
-      authDomain: "dokidoki-b03c6.firebaseapp.com",
-      projectId: "dokidoki-b03c6",
-      storageBucket: "dokidoki-b03c6.firebasestorage.app",
-      messagingSenderId: "635773673933",
-      appId: "1:635773673933:web:79021a01e3d1c41fd66484",
-    };
+    function fromDoc(doc) {
+      if (!doc || !doc.fields) return {};
+      const out = {};
+      for (const [k, v] of Object.entries(doc.fields)) {
+        if ('stringValue' in v) out[k] = v.stringValue;
+        else if ('integerValue' in v) out[k] = Number(v.integerValue);
+        else if ('doubleValue' in v) out[k] = v.doubleValue;
+        else if ('booleanValue' in v) out[k] = v.booleanValue;
+        else out[k] = null;
+      }
+      return out;
+    }
 
-    const firebaseApp = initializeApp(firebaseConfig);
-    const firedb = getFirestore(firebaseApp);
-    const storage = getStorage(firebaseApp);
+    function toFields(obj) {
+      const fields = {};
+      for (const [k, v] of Object.entries(obj)) {
+        if (v === null || v === undefined) fields[k] = { nullValue: null };
+        else if (typeof v === 'string') fields[k] = { stringValue: v };
+        else if (typeof v === 'number') fields[k] = Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+        else if (typeof v === 'boolean') fields[k] = { booleanValue: v };
+      }
+      return fields;
+    }
 
-    // ─── STORAGE (Firestore + Firebase Storage) ────────────────────────────────
+    function docId(d) { return d.name.split('/').pop(); }
+
+    async function fsGet(col, id) {
+      const r = await fetch(`${FS_BASE}/${col}/${id}?key=${API_KEY}`);
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error(`GET ${col}/${id} failed: ${r.status}`);
+      const d = await r.json();
+      return { id, ...fromDoc(d) };
+    }
+
+    async function fsList(col) {
+      const r = await fetch(`${FS_BASE}/${col}?key=${API_KEY}&pageSize=300`);
+      if (!r.ok) throw new Error(`LIST ${col} failed: ${r.status}`);
+      const data = await r.json();
+      return (data.documents || []).map(d => ({ id: docId(d), ...fromDoc(d) }));
+    }
+
+    async function fsCreate(col, data) {
+      const r = await fetch(`${FS_BASE}/${col}?key=${API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: toFields(data) })
+      });
+      if (!r.ok) throw new Error(`CREATE ${col} failed: ${r.status}`);
+      const d = await r.json();
+      return { id: docId(d), ...data };
+    }
+
+    async function fsUpdate(col, id, data) {
+      const mask = Object.keys(data).map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
+      const r = await fetch(`${FS_BASE}/${col}/${id}?key=${API_KEY}&${mask}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: toFields(data) })
+      });
+      if (!r.ok) throw new Error(`UPDATE ${col}/${id} failed: ${r.status}`);
+      return { id, ...data };
+    }
+
+    async function fsDelete(col, id) {
+      await fetch(`${FS_BASE}/${col}/${id}?key=${API_KEY}`, { method: 'DELETE' });
+    }
+
+    async function fsQuery(col, fieldPath, value) {
+      const body = {
+        structuredQuery: {
+          from: [{ collectionId: col }],
+          where: { fieldFilter: { field: { fieldPath }, op: 'EQUAL', value: { stringValue: value } } }
+        }
+      };
+      const r = await fetch(`${FS_BASE}:runQuery?key=${API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!r.ok) throw new Error(`QUERY ${col} failed: ${r.status}`);
+      const results = await r.json();
+      return results.filter(item => item.document).map(item => ({ id: docId(item.document), ...fromDoc(item.document) }));
+    }
+
+    async function stUpload(path, blob) {
+      const encodedPath = encodeURIComponent(path);
+      const r = await fetch(`${ST_BASE}?uploadType=media&name=${encodedPath}&key=${API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: blob
+      });
+      if (!r.ok) throw new Error(`Storage upload failed: ${r.status}`);
+      const meta = await r.json();
+      const token = meta.downloadTokens;
+      return `${ST_BASE}/${encodedPath}?alt=media&token=${token}`;
+    }
+
+    async function stDelete(path) {
+      try {
+        await fetch(`${ST_BASE}/${encodeURIComponent(path)}?key=${API_KEY}`, { method: 'DELETE' });
+      } catch (e) {}
+    }
+
+    // ─── DB LAYER ───────────────────────────────────────────────────────────────
     const DB = {
       getNickname: () => localStorage.getItem('doki_nickname') || '익명',
       setNickname: n => localStorage.setItem('doki_nickname', n),
 
       // Folders
       getFolders: async () => {
-        const snap = await getDocs(collection(firedb, 'folders'));
-        return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        const folders = await fsList('folders');
+        return folders.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       },
-      getFolder: async id => {
-        const snap = await getDoc(doc(firedb, 'folders', id));
-        return snap.exists() ? { id: snap.id, ...snap.data() } : null;
-      },
+      getFolder: async id => fsGet('folders', id),
       createFolder: async (name, unit) => {
         const folders = await DB.getFolders();
         if (folders.length >= 5) return null;
         if (folders.find(f => trimName(f.name) === trimName(name))) return 'dup';
         const data = { name: trimName(name), unit, order: folders.length, createdAt: today() };
-        const ref = await addDoc(collection(firedb, 'folders'), data);
-        return { id: ref.id, ...data };
+        return fsCreate('folders', data);
       },
       updateFolder: async (id, data) => {
         if (data.name) {
@@ -548,62 +635,45 @@
           if (folders.find(f => f.id !== id && trimName(f.name) === trimName(data.name))) return 'dup';
           data.name = trimName(data.name);
         }
-        await updateDoc(doc(firedb, 'folders', id), data);
+        await fsUpdate('folders', id, data);
         return { id, ...data };
       },
       deleteFolder: async id => {
         const files = await DB.getFolderFiles(id);
         await Promise.all(files.map(f => DB.deleteFile(f.id)));
-        await deleteDoc(doc(firedb, 'folders', id));
+        await fsDelete('folders', id);
       },
 
       // Files
-      getFiles: async () => {
-        const snap = await getDocs(collection(firedb, 'files'));
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      },
-      getFolderFiles: async folderId => {
-        const q = query(collection(firedb, 'files'), where('folderId', '==', folderId));
-        const snap = await getDocs(q);
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      },
-      getFile: async id => {
-        const snap = await getDoc(doc(firedb, 'files', id));
-        return snap.exists() ? { id: snap.id, ...snap.data() } : null;
-      },
+      getFiles: async () => fsList('files'),
+      getFolderFiles: async folderId => fsQuery('files', 'folderId', folderId),
+      getFile: async id => fsGet('files', id),
       createFile: async (data, imageBlob) => {
         let imageUrl = null, imagePath = null;
         if (imageBlob) {
           imagePath = `images/${uid()}.jpg`;
-          await uploadBytes(sRef(storage, imagePath), imageBlob);
-          imageUrl = await getDownloadURL(sRef(storage, imagePath));
+          imageUrl = await stUpload(imagePath, imageBlob);
         }
         const fileData = { ...data, imageUrl, imagePath, createdAt: today() };
-        const ref = await addDoc(collection(firedb, 'files'), fileData);
-        return { id: ref.id, ...fileData };
+        return fsCreate('files', fileData);
       },
       updateFile: async (id, data, imageBlob) => {
         const existing = await DB.getFile(id);
         let imageUrl = existing?.imageUrl ?? null;
         let imagePath = existing?.imagePath ?? null;
         if (imageBlob) {
-          if (existing?.imagePath) {
-            try { await deleteObject(sRef(storage, existing.imagePath)); } catch (e) {}
-          }
+          if (existing?.imagePath) await stDelete(existing.imagePath);
           imagePath = `images/${uid()}.jpg`;
-          await uploadBytes(sRef(storage, imagePath), imageBlob);
-          imageUrl = await getDownloadURL(sRef(storage, imagePath));
+          imageUrl = await stUpload(imagePath, imageBlob);
         }
         const updateData = { ...data, imageUrl, imagePath };
-        await updateDoc(doc(firedb, 'files', id), updateData);
+        await fsUpdate('files', id, updateData);
         return { id, ...existing, ...updateData };
       },
       deleteFile: async id => {
         const file = await DB.getFile(id);
-        if (file?.imagePath) {
-          try { await deleteObject(sRef(storage, file.imagePath)); } catch (e) {}
-        }
-        await deleteDoc(doc(firedb, 'files', id));
+        if (file?.imagePath) await stDelete(file.imagePath);
+        await fsDelete('files', id);
       },
     };
 
